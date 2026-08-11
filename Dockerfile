@@ -1,14 +1,13 @@
-# --- Build stage ---
-FROM maven:3.9-eclipse-temurin-17 AS build
-WORKDIR /app
-COPY pom.xml .
-RUN mvn -B dependency:go-offline
-COPY src ./src
-RUN mvn -B clean package -DskipTests
+# Runtime-only image for CI use.
+# Assumes `mvn package` has already run on the Jenkins agent (see Jenkinsfile: Package stage)
+# and produced target/taskapi-1.0.0.jar — this stage just packages that jar into an image.
 
-# --- Run stage ---
 FROM eclipse-temurin:17-jre-alpine
+
 WORKDIR /app
-COPY --from=build /app/target/taskapi-1.0.0.jar app.jar
+
+COPY target/taskapi-1.0.0.jar app.jar
+
 EXPOSE 8080
+
 ENTRYPOINT ["java", "-jar", "app.jar"]
