@@ -8,12 +8,16 @@ pipeline {
 
     parameters {
         booleanParam(name: 'PUSH_DOCKER_IMAGE', defaultValue: false, description: 'Build and push the Docker image after a successful build')
-        string(name: 'DOCKER_IMAGE_NAME', defaultValue: 'taskapi', description: 'Docker image name/repo (without tag)')
+        booleanParam(name: 'DEPLOY', defaultValue: false, description: 'Deploy to the target server after a successful push (implies PUSH_DOCKER_IMAGE)')
+        string(name: 'DOCKER_IMAGE_NAME', defaultValue: 'yourregistry/taskapi', description: 'Docker image name/repo (without tag) — include registry prefix, e.g. docker.io/youruser/taskapi')
     }
 
     environment {
-        DOCKER_CREDENTIALS_ID = 'docker-creds'   // Jenkins credential ID holding Docker registry username/password
-        IMAGE_TAG             = "${params.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
+        DOCKER_CREDENTIALS_ID = 'docker-creds'       // Jenkins credential: registry username/password
+        DEPLOY_SSH_CREDENTIALS_ID = 'deploy-ssh'  // Jenkins credential: SSH private key (ed25519) for the deploy user
+        DEPLOY_HOST = 'ubuntu@10.0.1.6'   // change to your actual server
+        DEPLOY_DIR  = '/opt/taskapi'                 // where the compose file lives on the server
+        IMAGE_TAG  = "${params.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
     }
 
     options {
@@ -81,6 +85,30 @@ pipeline {
                         docker push "${DOCKER_USER}/${IMAGE_TAG}"
                         docker logout
                     '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                expression { return params.DEPLOY }
+            }
+            steps {
+                // Copy the deploy-only compose file to the server (build-free — it just pulls the image)
+                sshagent(credentials: [env.DEPLOY_SSH_CREDENTIALS_ID]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_HOST} 'mkdir -p ${DEPLOY_DIR}'
+                        scp -o StrictHostKeyChecking=no docker-compose.prod.yml ${DEPLOY_HOST}:${DEPLOY_DIR}/docker-compose.yml
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_HOST} '
+                            cd ${DEPLOY_DIR} && \
+                            export DOCKER_USER=${DOCKER_USER} && \
+                            export DOCKER_IMAGE=${params.DOCKER_IMAGE_NAME} && \
+                            export IMAGE_TAG=${IMAGE_TAG} && \
+                            docker compose pull && \
+                            docker compose up -d && \
+                            docker image prune -f
+                        '
+                    """
                 }
             }
         }
