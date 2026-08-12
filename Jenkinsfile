@@ -63,7 +63,10 @@ pipeline {
                 expression { return params.PUSH_DOCKER_IMAGE }
             }
             steps {
-                sh "docker build -t ${DOCKER_CREDENTIALS_ID_USR}/${IMAGE_TAG} -t ${DOCKER_CREDENTIALS_ID_USR}/${IMAGE_TAG} ."
+                withCredentials([usernamePassword(credentialsId: env.DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]){
+                    sh "docker build -t ${DOCKER_USER}/${IMAGE_TAG} -t ${DOCKER_USER}/${IMAGE_TAG} ."
+                }
+                
             }
         }
 
@@ -75,7 +78,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: env.DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push "${DOCKER_CREDENTIALS_ID_USR}/${IMAGE_TAG}"
+                        docker push "${DOCKER_USER}/${IMAGE_TAG}"
                         docker logout
                     '''
                 }
