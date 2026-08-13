@@ -27,7 +27,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_CREDENTIALS_ID = 'docker'
+        DOCKER_CREDENTIALS_ID = 'docker-cred-token'
         DEPLOY_SSH_CREDENTIALS_ID = 'deploy-ssh'
 
         DEPLOY_HOST = 'ubuntu@10.0.1.6'
