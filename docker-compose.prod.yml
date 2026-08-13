@@ -1,51 +1,13 @@
-version: "3.8"
-
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: taskapi-app
+  taskapi:
+    image: ${IMAGE_TAG}
+
+    container_name: taskapi
+
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      # Overrides application.properties — Spring Boot maps SPRING_DATASOURCE_URL -> spring.datasource.url etc.
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taskapi
-      DB_USERNAME: taskapi_user
-      DB_PASSWORD: changeme
-      SERVER_PORT: 8080
+
     ports:
       - "8080:8080"
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'wget -qO- http://localhost:8080/actuator/health | grep -q ''"status":"UP"''',
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 30s
 
-  postgres:
-    image: postgres:16-alpine
-    container_name: taskapi-postgres
-    restart: unless-stopped
     environment:
-      POSTGRES_DB: taskapi
-      POSTGRES_USER: taskapi_user
-      POSTGRES_PASSWORD: changeme
-    ports:
-      - "5432:5432"
-    volumes:
-      - taskapi_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U taskapi_user -d taskapi"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  taskapi_pgdata:
+      SPRING_PROFILES_ACTIVE: prod
