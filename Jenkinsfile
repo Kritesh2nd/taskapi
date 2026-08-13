@@ -131,6 +131,51 @@ pipeline {
             }
         }
 
+        // original deploy code
+        // stage('Docker Push') {
+        //     when {
+        //         expression {
+        //             return params.PUSH_DOCKER_IMAGE
+        //         }
+        //     }
+
+        //     steps {
+        //         withCredentials([
+        //             usernamePassword(
+        //                 credentialsId: 'docker',
+        //                 usernameVariable: 'DOCKER_USER',
+        //                 passwordVariable: 'DOCKER_PASS'
+        //             )
+        //         ]) {
+        //             sh '''
+        //                 set -e
+
+        //                 echo "======================================"
+        //                 echo "Docker Login"
+        //                 echo "======================================"
+
+        //                 echo "$DOCKER_PASS" | docker login \
+        //                     --username "$DOCKER_USER" \
+        //                     --password-stdin
+
+        //                 echo "======================================"
+        //                 echo "Docker Push"
+        //                 echo "======================================"
+
+        //                 echo "Pushing image:"
+        //                 echo "$IMAGE_TAG"
+
+        //                 docker push "$IMAGE_TAG"
+
+        //                 echo "Docker image pushed successfully."
+
+        //                 docker logout
+        //             '''
+        //         }
+        //     }
+        // }
+
+        // for testing
         stage('Docker Push') {
             when {
                 expression {
@@ -147,26 +192,14 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        set -e
-
-                        echo "======================================"
-                        echo "Docker Login"
-                        echo "======================================"
+                        echo "Docker credential loaded"
+                        echo "Docker username: $DOCKER_USER"
 
                         echo "$DOCKER_PASS" | docker login \
                             --username "$DOCKER_USER" \
                             --password-stdin
 
-                        echo "======================================"
-                        echo "Docker Push"
-                        echo "======================================"
-
-                        echo "Pushing image:"
-                        echo "$IMAGE_TAG"
-
                         docker push "$IMAGE_TAG"
-
-                        echo "Docker image pushed successfully."
 
                         docker logout
                     '''
