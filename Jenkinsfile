@@ -9,20 +9,20 @@ pipeline {
     parameters {
         booleanParam(
             name: 'PUSH_DOCKER_IMAGE',
-            defaultValue: false,
+            defaultValue: true,
             description: 'Build and push the Docker image after a successful Maven build'
         )
 
         booleanParam(
             name: 'DEPLOY',
-            defaultValue: false,
+            defaultValue: true,
             description: 'Deploy the pushed Docker image to the target server'
         )
 
         string(
             name: 'DOCKER_IMAGE_NAME',
-            defaultValue: 'youruser/taskapi',
-            description: 'Docker image repository without tag, e.g. youruser/taskapi'
+            defaultValue: 'moudle8848/taskapi',
+            description: 'Docker image repository without tag, e.g. moudle8848/taskapi'
         )
     }
 
@@ -34,9 +34,9 @@ pipeline {
         DEPLOY_DIR = '/opt/taskapi'
 
         // Example:
-        // DOCKER_IMAGE_NAME = youruser/taskapi
+        // DOCKER_IMAGE_NAME = moudle8848/taskapi
         // BUILD_NUMBER = 11
-        // IMAGE_TAG = youruser/taskapi:11
+        // IMAGE_TAG = moudle8848/taskapi:11
         IMAGE_TAG = "${params.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
     }
 
