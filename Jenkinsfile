@@ -13,7 +13,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_CREDENTIALS_ID = 'docker-creds'       // Jenkins credential: registry username/password
+        DOCKER_CREDENTIALS_ID = 'docker'       // Jenkins credential: registry username/password
         DEPLOY_SSH_CREDENTIALS_ID = 'deploy-ssh'  // Jenkins credential: SSH private key (ed25519) for the deploy user
         DEPLOY_HOST = 'ubuntu@10.0.1.6'   // change to your actual server
         DEPLOY_DIR  = '/opt/taskapi'                 // where the compose file lives on the server
