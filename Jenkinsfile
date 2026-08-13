@@ -30,7 +30,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'docker-cred-token'
         DEPLOY_SSH_CREDENTIALS_ID = 'agent1'
 
-        DEPLOY_HOST = 'master@192.168.121.83'
+        DEPLOY_HOST = 'agent1@192.168.121.83'
         DEPLOY_DIR = '/opt/taskapi'
 
         // Example:
