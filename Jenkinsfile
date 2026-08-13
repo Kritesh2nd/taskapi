@@ -16,7 +16,7 @@ pipeline {
         booleanParam(
             name: 'DEPLOY',
             defaultValue: true,
-            description: 'Deploy the pushed Docker image to the target server'
+            description: 'Deploy the Docker image to the Jenkins agent server'
         )
 
         string(
@@ -28,21 +28,21 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS_ID = 'docker-cred-token'
-        DEPLOY_SSH_CREDENTIALS_ID = 'agent1'
 
-        DEPLOY_HOST = 'agent1@192.168.121.83'
         DEPLOY_DIR = '/opt/taskapi'
 
-        // Example:
-        // DOCKER_IMAGE_NAME = moudle8848/taskapi
-        // BUILD_NUMBER = 11
-        // IMAGE_TAG = moudle8848/taskapi:11
         IMAGE_TAG = "${params.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
     }
 
     options {
         timestamps()
-        buildDiscarder(logRotator(numToKeepStr: '10'))
+
+        buildDiscarder(
+            logRotator(
+                numToKeepStr: '10'
+            )
+        )
+
         skipDefaultCheckout(false)
     }
 
@@ -57,13 +57,26 @@ pipeline {
         stage('Build') {
             steps {
                 sh '''
-                    echo "Java version:"
+                    set -e
+
+                    echo "======================================"
+                    echo "Java Version"
+                    echo "======================================"
+
                     java -version
 
-                    echo "Maven version:"
+                    echo ""
+                    echo "======================================"
+                    echo "Maven Version"
+                    echo "======================================"
+
                     mvn -version
 
-                    echo "Building application..."
+                    echo ""
+                    echo "======================================"
+                    echo "Building Application"
+                    echo "======================================"
+
                     mvn -B -ntp clean compile
                 '''
             }
@@ -72,7 +85,12 @@ pipeline {
         stage('Test') {
             steps {
                 sh '''
-                    echo "Running tests..."
+                    set -e
+
+                    echo "======================================"
+                    echo "Running Tests"
+                    echo "======================================"
+
                     mvn -B -ntp test
                 '''
             }
@@ -90,7 +108,12 @@ pipeline {
         stage('Package') {
             steps {
                 sh '''
-                    echo "Packaging Spring Boot application..."
+                    set -e
+
+                    echo "======================================"
+                    echo "Packaging Spring Boot Application"
+                    echo "======================================"
+
                     mvn -B -ntp package -DskipTests
                 '''
             }
@@ -114,6 +137,8 @@ pipeline {
 
             steps {
                 sh '''
+                    set -e
+
                     echo "======================================"
                     echo "Docker Build"
                     echo "======================================"
@@ -121,61 +146,20 @@ pipeline {
                     echo "Docker version:"
                     docker --version
 
+                    echo ""
                     echo "Building image:"
                     echo "$IMAGE_TAG"
 
-                    docker build -t "$IMAGE_TAG" .
+                    docker build \
+                        -t "$IMAGE_TAG" \
+                        .
 
+                    echo ""
                     echo "Docker image built successfully."
                 '''
             }
         }
 
-        // original deploy code
-        // stage('Docker Push') {
-        //     when {
-        //         expression {
-        //             return params.PUSH_DOCKER_IMAGE
-        //         }
-        //     }
-
-        //     steps {
-        //         withCredentials([
-        //             usernamePassword(
-        //                 credentialsId: 'docker-cred-token',
-        //                 usernameVariable: 'DOCKER_USER',
-        //                 passwordVariable: 'DOCKER_PASS'
-        //             )
-        //         ]) {
-        //             sh '''
-        //                 set -e
-
-        //                 echo "======================================"
-        //                 echo "Docker Login"
-        //                 echo "======================================"
-
-        //                 echo "$DOCKER_PASS" | docker login \
-        //                     --username "$DOCKER_USER" \
-        //                     --password-stdin
-
-        //                 echo "======================================"
-        //                 echo "Docker Push"
-        //                 echo "======================================"
-
-        //                 echo "Pushing image:"
-        //                 echo "$IMAGE_TAG"
-
-        //                 docker push "$IMAGE_TAG"
-
-        //                 echo "Docker image pushed successfully."
-
-        //                 docker logout
-        //             '''
-        //         }
-        //     }
-        // }
-
-        // for testing
         stage('Docker Push') {
             when {
                 expression {
@@ -192,14 +176,31 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        echo "Docker credential loaded"
-                        echo "Docker username: $DOCKER_USER"
+                        set -e
+
+                        echo "======================================"
+                        echo "Docker Login"
+                        echo "======================================"
 
                         echo "$DOCKER_PASS" | docker login \
                             --username "$DOCKER_USER" \
                             --password-stdin
 
+                        echo ""
+                        echo "Docker login successful."
+
+                        echo ""
+                        echo "======================================"
+                        echo "Docker Push"
+                        echo "======================================"
+
+                        echo "Pushing image:"
+                        echo "$IMAGE_TAG"
+
                         docker push "$IMAGE_TAG"
+
+                        echo ""
+                        echo "Docker image pushed successfully."
 
                         docker logout
                     '''
@@ -207,161 +208,105 @@ pipeline {
             }
         }
 
-    //     stage('Deploy') {
-    //         when {
-    //             expression {
-    //                 return params.DEPLOY
-    //             }
-    //         }
-
-    //         steps {
-    //             withCredentials([
-    //                 usernamePassword(
-    //                     credentialsId: 'docker-cred-token',
-    //                     usernameVariable: 'DOCKER_USER',
-    //                     passwordVariable: 'DOCKER_PASS'
-    //                 )
-    //             ]) {
-    //                 sshagent(credentials: ['agent1']) {
-
-    //                     sh """
-    //                         set -e
-
-    //                         echo "======================================"
-    //                         echo "Deploy"
-    //                         echo "======================================"
-
-    //                         echo "Creating deployment directory..."
-    //                         ssh -o StrictHostKeyChecking=no \
-    //                             ${DEPLOY_HOST} \
-    //                             'mkdir -p ${DEPLOY_DIR}'
-
-    //                         echo "Copying docker-compose file..."
-    //                         scp -o StrictHostKeyChecking=no \
-    //                             docker-compose.prod.yml \
-    //                             ${DEPLOY_HOST}:${DEPLOY_DIR}/docker-compose.yml
-
-    //                         echo "Deploying image..."
-
-    //                         ssh -o StrictHostKeyChecking=no ${DEPLOY_HOST} '
-    //                             set -e
-
-    //                             cd ${DEPLOY_DIR}
-
-    //                             export DOCKER_USER="${DOCKER_USER}"
-    //                             export DOCKER_IMAGE="${params.DOCKER_IMAGE_NAME}"
-    //                             export IMAGE_TAG="${IMAGE_TAG}"
-
-    //                             echo "Docker image:"
-    //                             echo "\$DOCKER_IMAGE:\$IMAGE_TAG"
-
-    //                             echo "${DOCKER_PASS}" | docker login \
-    //                                 --username "${DOCKER_USER}" \
-    //                                 --password-stdin
-
-    //                             docker compose pull
-    //                             docker compose up -d
-
-    //                             docker logout
-
-    //                             docker image prune -f
-
-    //                             echo "Deployment completed successfully."
-    //                         '
-    //                     """
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    stage('Deploy') {
-        when {
-            expression {
-                return params.DEPLOY
+        stage('Deploy') {
+            when {
+                expression {
+                    return params.DEPLOY
+                }
             }
-        }
 
-        steps {
-            withCredentials([
-                usernamePassword(
-                    credentialsId: 'docker-cred-token',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )
-            ]) {
-                sh '''
-                    set -e
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'docker-cred-token',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                        set -e
 
-                    echo "======================================"
-                    echo "Deploy"
-                    echo "======================================"
+                        echo "======================================"
+                        echo "Deploy"
+                        echo "======================================"
 
-                    echo "Deploying on Jenkins agent server"
+                        echo "Deploying on Jenkins agent server"
 
-                    echo "Agent hostname:"
-                    hostname
+                        echo ""
+                        echo "Agent hostname:"
+                        hostname
 
-                    echo "Agent IP:"
-                    hostname -I
+                        echo ""
+                        echo "Agent IP:"
+                        hostname -I
 
-                    echo "Deployment directory:"
-                    echo "$DEPLOY_DIR"
+                        echo ""
+                        echo "Deployment directory:"
+                        echo "$DEPLOY_DIR"
 
-                    echo "Docker image:"
-                    echo "$IMAGE_TAG"
+                        echo ""
+                        echo "Docker image:"
+                        echo "$IMAGE_TAG"
 
-                    echo "======================================"
-                    echo "Prepare Deployment Directory"
-                    echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Preparing Deployment Directory"
+                        echo "======================================"
 
-                    mkdir -p "$DEPLOY_DIR"
+                        mkdir -p "$DEPLOY_DIR"
 
-                    cp docker-compose.prod.yml \
-                        "$DEPLOY_DIR/docker-compose.yml"
+                        cp docker-compose.prod.yml \
+                            "$DEPLOY_DIR/docker-compose.yml"
 
-                    cd "$DEPLOY_DIR"
+                        cd "$DEPLOY_DIR"
 
-                    echo "======================================"
-                    echo "Docker Login"
-                    echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Docker Login"
+                        echo "======================================"
 
-                    echo "$DOCKER_PASS" | docker login \
-                        --username "$DOCKER_USER" \
-                        --password-stdin
+                        echo "$DOCKER_PASS" | docker login \
+                            --username "$DOCKER_USER" \
+                            --password-stdin
 
-                    echo "======================================"
-                    echo "Pull Docker Image"
-                    echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Pulling Docker Image"
+                        echo "======================================"
 
-                    export IMAGE_TAG="$IMAGE_TAG"
+                        export IMAGE_TAG="$IMAGE_TAG"
 
-                    docker compose pull
+                        docker compose pull
 
-                    echo "======================================"
-                    echo "Start Application"
-                    echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Starting Application"
+                        echo "======================================"
 
-                    docker compose up -d
+                        docker compose up -d
 
-                    echo "======================================"
-                    echo "Container Status"
-                    echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Container Status"
+                        echo "======================================"
 
-                    docker compose ps
+                        docker compose ps
 
-                    echo "======================================"
-                    echo "Cleanup"
-                    echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Cleaning Old Images"
+                        echo "======================================"
 
-                    docker image prune -f
+                        docker image prune -f
 
-                    docker logout
+                        docker logout
 
-                    echo "======================================"
-                    echo "Deployment Successful"
-                    echo "======================================"
-                '''
+                        echo ""
+                        echo "======================================"
+                        echo "Deployment Successful"
+                        echo "======================================"
+                    '''
+                }
             }
         }
     }
