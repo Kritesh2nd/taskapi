@@ -142,7 +142,7 @@ pipeline {
         //     steps {
         //         withCredentials([
         //             usernamePassword(
-        //                 credentialsId: 'docker',
+        //                 credentialsId: 'docker-cred-token',
         //                 usernameVariable: 'DOCKER_USER',
         //                 passwordVariable: 'DOCKER_PASS'
         //             )
@@ -186,7 +186,7 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'docker',
+                        credentialsId: 'docker-cred-token',
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )
@@ -217,7 +217,7 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'docker',
+                        credentialsId: 'docker-cred-token',
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )
