@@ -207,73 +207,164 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
-            when {
-                expression {
-                    return params.DEPLOY
-                }
-            }
+    //     stage('Deploy') {
+    //         when {
+    //             expression {
+    //                 return params.DEPLOY
+    //             }
+    //         }
 
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'docker-cred-token',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    sshagent(credentials: ['agent1']) {
+    //         steps {
+    //             withCredentials([
+    //                 usernamePassword(
+    //                     credentialsId: 'docker-cred-token',
+    //                     usernameVariable: 'DOCKER_USER',
+    //                     passwordVariable: 'DOCKER_PASS'
+    //                 )
+    //             ]) {
+    //                 sshagent(credentials: ['agent1']) {
 
-                        sh """
-                            set -e
+    //                     sh """
+    //                         set -e
 
-                            echo "======================================"
-                            echo "Deploy"
-                            echo "======================================"
+    //                         echo "======================================"
+    //                         echo "Deploy"
+    //                         echo "======================================"
 
-                            echo "Creating deployment directory..."
-                            ssh -o StrictHostKeyChecking=no \
-                                ${DEPLOY_HOST} \
-                                'mkdir -p ${DEPLOY_DIR}'
+    //                         echo "Creating deployment directory..."
+    //                         ssh -o StrictHostKeyChecking=no \
+    //                             ${DEPLOY_HOST} \
+    //                             'mkdir -p ${DEPLOY_DIR}'
 
-                            echo "Copying docker-compose file..."
-                            scp -o StrictHostKeyChecking=no \
-                                docker-compose.prod.yml \
-                                ${DEPLOY_HOST}:${DEPLOY_DIR}/docker-compose.yml
+    //                         echo "Copying docker-compose file..."
+    //                         scp -o StrictHostKeyChecking=no \
+    //                             docker-compose.prod.yml \
+    //                             ${DEPLOY_HOST}:${DEPLOY_DIR}/docker-compose.yml
 
-                            echo "Deploying image..."
+    //                         echo "Deploying image..."
 
-                            ssh -o StrictHostKeyChecking=no ${DEPLOY_HOST} '
-                                set -e
+    //                         ssh -o StrictHostKeyChecking=no ${DEPLOY_HOST} '
+    //                             set -e
 
-                                cd ${DEPLOY_DIR}
+    //                             cd ${DEPLOY_DIR}
 
-                                export DOCKER_USER="${DOCKER_USER}"
-                                export DOCKER_IMAGE="${params.DOCKER_IMAGE_NAME}"
-                                export IMAGE_TAG="${IMAGE_TAG}"
+    //                             export DOCKER_USER="${DOCKER_USER}"
+    //                             export DOCKER_IMAGE="${params.DOCKER_IMAGE_NAME}"
+    //                             export IMAGE_TAG="${IMAGE_TAG}"
 
-                                echo "Docker image:"
-                                echo "\$DOCKER_IMAGE:\$IMAGE_TAG"
+    //                             echo "Docker image:"
+    //                             echo "\$DOCKER_IMAGE:\$IMAGE_TAG"
 
-                                echo "${DOCKER_PASS}" | docker login \
-                                    --username "${DOCKER_USER}" \
-                                    --password-stdin
+    //                             echo "${DOCKER_PASS}" | docker login \
+    //                                 --username "${DOCKER_USER}" \
+    //                                 --password-stdin
 
-                                docker compose pull
-                                docker compose up -d
+    //                             docker compose pull
+    //                             docker compose up -d
 
-                                docker logout
+    //                             docker logout
 
-                                docker image prune -f
+    //                             docker image prune -f
 
-                                echo "Deployment completed successfully."
-                            '
-                        """
-                    }
-                }
-            }
+    //                             echo "Deployment completed successfully."
+    //                         '
+    //                     """
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
+    stage('Deploy') {
+    when {
+        expression {
+            return params.DEPLOY
         }
     }
+
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'docker',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )
+        ]) {
+            sh '''
+                set -e
+
+                echo "======================================"
+                echo "Deploy"
+                echo "======================================"
+
+                echo "Deploying on Jenkins agent server"
+
+                echo "Agent hostname:"
+                hostname
+
+                echo "Agent IP:"
+                hostname -I
+
+                echo "Deployment directory:"
+                echo "$DEPLOY_DIR"
+
+                echo "Docker image:"
+                echo "$IMAGE_TAG"
+
+                echo "======================================"
+                echo "Prepare Deployment Directory"
+                echo "======================================"
+
+                mkdir -p "$DEPLOY_DIR"
+
+                cp docker-compose.prod.yml \
+                    "$DEPLOY_DIR/docker-compose.yml"
+
+                cd "$DEPLOY_DIR"
+
+                echo "======================================"
+                echo "Docker Login"
+                echo "======================================"
+
+                echo "$DOCKER_PASS" | docker login \
+                    --username "$DOCKER_USER" \
+                    --password-stdin
+
+                echo "======================================"
+                echo "Pull Docker Image"
+                echo "======================================"
+
+                export IMAGE_TAG="$IMAGE_TAG"
+
+                docker compose pull
+
+                echo "======================================"
+                echo "Start Application"
+                echo "======================================"
+
+                docker compose up -d
+
+                echo "======================================"
+                echo "Container Status"
+                echo "======================================"
+
+                docker compose ps
+
+                echo "======================================"
+                echo "Cleanup"
+                echo "======================================"
+
+                docker image prune -f
+
+                docker logout
+
+                echo "======================================"
+                echo "Deployment Successful"
+                echo "======================================"
+            '''
+        }
+    }
+}
 
     post {
         success {
