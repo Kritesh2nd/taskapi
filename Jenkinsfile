@@ -276,95 +276,95 @@ pipeline {
     // }
 
     stage('Deploy') {
-    when {
-        expression {
-            return params.DEPLOY
+        when {
+            expression {
+                return params.DEPLOY
+            }
+        }
+
+        steps {
+            withCredentials([
+                usernamePassword(
+                    credentialsId: 'docker-cred-token',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )
+            ]) {
+                sh '''
+                    set -e
+
+                    echo "======================================"
+                    echo "Deploy"
+                    echo "======================================"
+
+                    echo "Deploying on Jenkins agent server"
+
+                    echo "Agent hostname:"
+                    hostname
+
+                    echo "Agent IP:"
+                    hostname -I
+
+                    echo "Deployment directory:"
+                    echo "$DEPLOY_DIR"
+
+                    echo "Docker image:"
+                    echo "$IMAGE_TAG"
+
+                    echo "======================================"
+                    echo "Prepare Deployment Directory"
+                    echo "======================================"
+
+                    mkdir -p "$DEPLOY_DIR"
+
+                    cp docker-compose.prod.yml \
+                        "$DEPLOY_DIR/docker-compose.yml"
+
+                    cd "$DEPLOY_DIR"
+
+                    echo "======================================"
+                    echo "Docker Login"
+                    echo "======================================"
+
+                    echo "$DOCKER_PASS" | docker login \
+                        --username "$DOCKER_USER" \
+                        --password-stdin
+
+                    echo "======================================"
+                    echo "Pull Docker Image"
+                    echo "======================================"
+
+                    export IMAGE_TAG="$IMAGE_TAG"
+
+                    docker compose pull
+
+                    echo "======================================"
+                    echo "Start Application"
+                    echo "======================================"
+
+                    docker compose up -d
+
+                    echo "======================================"
+                    echo "Container Status"
+                    echo "======================================"
+
+                    docker compose ps
+
+                    echo "======================================"
+                    echo "Cleanup"
+                    echo "======================================"
+
+                    docker image prune -f
+
+                    docker logout
+
+                    echo "======================================"
+                    echo "Deployment Successful"
+                    echo "======================================"
+                '''
+            }
         }
     }
-
-    steps {
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'docker-cred-token',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
-            )
-        ]) {
-            sh '''
-                set -e
-
-                echo "======================================"
-                echo "Deploy"
-                echo "======================================"
-
-                echo "Deploying on Jenkins agent server"
-
-                echo "Agent hostname:"
-                hostname
-
-                echo "Agent IP:"
-                hostname -I
-
-                echo "Deployment directory:"
-                echo "$DEPLOY_DIR"
-
-                echo "Docker image:"
-                echo "$IMAGE_TAG"
-
-                echo "======================================"
-                echo "Prepare Deployment Directory"
-                echo "======================================"
-
-                mkdir -p "$DEPLOY_DIR"
-
-                cp docker-compose.prod.yml \
-                    "$DEPLOY_DIR/docker-compose.yml"
-
-                cd "$DEPLOY_DIR"
-
-                echo "======================================"
-                echo "Docker Login"
-                echo "======================================"
-
-                echo "$DOCKER_PASS" | docker login \
-                    --username "$DOCKER_USER" \
-                    --password-stdin
-
-                echo "======================================"
-                echo "Pull Docker Image"
-                echo "======================================"
-
-                export IMAGE_TAG="$IMAGE_TAG"
-
-                docker compose pull
-
-                echo "======================================"
-                echo "Start Application"
-                echo "======================================"
-
-                docker compose up -d
-
-                echo "======================================"
-                echo "Container Status"
-                echo "======================================"
-
-                docker compose ps
-
-                echo "======================================"
-                echo "Cleanup"
-                echo "======================================"
-
-                docker image prune -f
-
-                docker logout
-
-                echo "======================================"
-                echo "Deployment Successful"
-                echo "======================================"
-            '''
-        }
-    }
-}
 
     post {
         success {
