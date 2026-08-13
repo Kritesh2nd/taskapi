@@ -253,7 +253,7 @@ pipeline {
                         echo "Preparing Deployment Directory"
                         echo "======================================"
 
-                        mkdir -p "$DEPLOY_DIR"
+                        sudo mkdir -p "$DEPLOY_DIR"
 
                         cp docker-compose.prod.yml \
                             "$DEPLOY_DIR/docker-compose.yml"
