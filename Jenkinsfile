@@ -29,7 +29,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'kritesh_docker_key'
 
-        DEPLOY_DIR = '/tmp/taskapi'
+        DEPLOY_DIR = '/tmp/taskapi-kritesh'
 
         IMAGE_TAG = "${params.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
     }
@@ -250,7 +250,10 @@ pipeline {
                 echo "Preparing Deployment Directory"
                 echo "======================================"
 
-                sudo mkdir -p "$DEPLOY_DIR"
+                mkdir -p "$DEPLOY_DIR"
+
+                cp docker-compose.prod.yml "$DEPLOY_DIR/docker-compose.yml"
+                cd "$DEPLOY_DIR"
 
                 cp docker-compose.prod.yml \
                     "$DEPLOY_DIR/docker-compose.yml"
