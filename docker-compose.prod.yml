@@ -22,7 +22,7 @@ services:
       - taskapi-network
 
   taskapi:
-    image: ${IMAGE_TAG}
+    image: ${IMAGE_TAG:-moudle8848/taskapi:latest}
     container_name: taskapi
     restart: unless-stopped
 
