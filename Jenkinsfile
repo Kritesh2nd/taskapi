@@ -29,7 +29,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'kritesh_docker_key'
 
-        DEPLOY_DIR = '/opt/taskapi'
+        DEPLOY_DIR = '/tmp/taskapi'
 
         IMAGE_TAG = "${params.DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}"
     }
