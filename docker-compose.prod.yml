@@ -1,21 +1,42 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: taskapi-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: taskapi
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d taskapi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - taskapi-network
+
   taskapi:
     image: ${IMAGE_TAG}
-
     container_name: taskapi
-
     restart: unless-stopped
 
     ports:
       - "8081:8080"
 
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
 
     networks:
       - taskapi-network
@@ -23,3 +44,6 @@ services:
 networks:
   taskapi-network:
     driver: bridge
+
+volumes:
+  postgres-data:
