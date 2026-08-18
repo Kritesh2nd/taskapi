@@ -27,7 +27,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_CREDENTIALS_ID = 'docker-cred-token'
+        DOCKER_CREDENTIALS_ID = 'kritesh_docker_key'
 
         DEPLOY_DIR = '/opt/taskapi'
 
@@ -170,7 +170,7 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'docker-cred-token',
+                        credentialsId: 'kritesh_docker_key',
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )
@@ -209,106 +209,108 @@ pipeline {
         }
 
         stage('Deploy') {
-            when {
-                expression {
-                    return params.DEPLOY
-                }
-            }
-
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'docker-cred-token',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    sh '''
-                        set -e
-
-                        echo "======================================"
-                        echo "Deploy"
-                        echo "======================================"
-
-                        echo "Deploying on Jenkins agent server"
-
-                        echo ""
-                        echo "Agent hostname:"
-                        hostname
-
-                        echo ""
-                        echo "Agent IP:"
-                        hostname -I
-
-                        echo ""
-                        echo "Deployment directory:"
-                        echo "$DEPLOY_DIR"
-
-                        echo ""
-                        echo "Docker image:"
-                        echo "$IMAGE_TAG"
-
-                        echo ""
-                        echo "======================================"
-                        echo "Preparing Deployment Directory"
-                        echo "======================================"
-
-                        sudo mkdir -p "$DEPLOY_DIR"
-
-                        cp docker-compose.prod.yml \
-                            "$DEPLOY_DIR/docker-compose.yml"
-
-                        cd "$DEPLOY_DIR"
-
-                        echo ""
-                        echo "======================================"
-                        echo "Docker Login"
-                        echo "======================================"
-
-                        echo "$DOCKER_PASS" | docker login \
-                            --username "$DOCKER_USER" \
-                            --password-stdin
-
-                        echo ""
-                        echo "======================================"
-                        echo "Pulling Docker Image"
-                        echo "======================================"
-
-                        export IMAGE_TAG="$IMAGE_TAG"
-
-                        docker compose pull
-
-                        echo ""
-                        echo "======================================"
-                        echo "Starting Application"
-                        echo "======================================"
-
-                        docker compose up -d
-
-                        echo ""
-                        echo "======================================"
-                        echo "Container Status"
-                        echo "======================================"
-
-                        docker compose ps
-
-                        echo ""
-                        echo "======================================"
-                        echo "Cleaning Old Images"
-                        echo "======================================"
-
-                        docker image prune -f
-
-                        docker logout
-
-                        echo ""
-                        echo "======================================"
-                        echo "Deployment Successful"
-                        echo "======================================"
-                    '''
-                }
-            }
+    when {
+        expression {
+            return params.DEPLOY
         }
+    }
+
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'kritesh_docker_key',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )
+        ]) {
+            sh '''
+                set -e
+
+                echo "======================================"
+                echo "Deploy"
+                echo "======================================"
+
+                echo "Deployment server:"
+                hostname
+
+                echo ""
+                echo "Deployment IP:"
+                hostname -I
+
+                echo ""
+                echo "Deployment directory:"
+                echo "$DEPLOY_DIR"
+
+                echo ""
+                echo "Image:"
+                echo "$IMAGE_TAG"
+
+                echo ""
+                echo "======================================"
+                echo "Preparing Deployment Directory"
+                echo "======================================"
+
+                sudo mkdir -p "$DEPLOY_DIR"
+
+                cp docker-compose.prod.yml \
+                    "$DEPLOY_DIR/docker-compose.yml"
+
+                cd "$DEPLOY_DIR"
+
+                echo ""
+                echo "======================================"
+                echo "Docker Login"
+                echo "======================================"
+
+                echo "$DOCKER_PASS" | docker login \
+                    --username "$DOCKER_USER" \
+                    --password-stdin
+
+                echo ""
+                echo "======================================"
+                echo "Pulling Image From Docker Hub"
+                echo "======================================"
+
+                docker pull "$IMAGE_TAG"
+
+                echo ""
+                echo "======================================"
+                echo "Stopping Previous Container"
+                echo "======================================"
+
+                docker compose down
+
+                echo ""
+                echo "======================================"
+                echo "Starting New Container"
+                echo "======================================"
+
+                docker compose up -d
+
+                echo ""
+                echo "======================================"
+                echo "Container Status"
+                echo "======================================"
+
+                docker compose ps
+
+                echo ""
+                echo "======================================"
+                echo "Cleaning Old Images"
+                echo "======================================"
+
+                docker image prune -f
+
+                docker logout
+
+                echo ""
+                echo "======================================"
+                echo "Deployment Successful"
+                echo "======================================"
+            '''
+        }
+    }
+}
     }
 
     post {
