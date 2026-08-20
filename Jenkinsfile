@@ -264,7 +264,12 @@ pipeline {
                         scp -i "$SSH_KEY" \
                             -o StrictHostKeyChecking=no \
                             docker-compose.prod.yml \
-                            "$SSH_USER@$DEPLOY_HOST:/opt/taskapi-kritesh/docker-compose.yml"
+                            "$SSH_USER@$DEPLOY_HOST:/tmp/docker-compose.yml"
+
+                        ssh -i "$SSH_KEY" \
+                            -o StrictHostKeyChecking=no \
+                            "$SSH_USER@$DEPLOY_HOST" \
+                            "sudo mv /tmp/docker-compose.yml /opt/taskapi-kritesh/docker-compose.yml"
 
                         echo ""
                         echo "======================================"
