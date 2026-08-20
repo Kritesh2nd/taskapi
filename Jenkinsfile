@@ -221,69 +221,75 @@ pipeline {
                         credentialsId: "${DOCKER_CREDENTIALS_ID}",
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
+                    ),
+                    sshUserPrivateKey(
+                        credentialsId: 'kritesh_ec2_cred',
+                        keyFileVariable: 'SSH_KEY',
+                        usernameVariable: 'SSH_USER'
                     )
                 ]) {
-                    sshagent(['kritesh_ec2_cred']) {
-                        sh '''
-                            set -e
+                    sh '''
+                        set -e
 
-                            DEPLOY_HOST="10.1.67.189"
-                            DEPLOY_USER="ubuntu"
+                        DEPLOY_HOST="10.1.67.189"
 
-                            echo "======================================"
-                            echo "Deploy"
-                            echo "======================================"
+                        echo "======================================"
+                        echo "Deploy"
+                        echo "======================================"
 
-                            echo "Deployment server:"
-                            ssh -o StrictHostKeyChecking=no \
-                                "$DEPLOY_USER@$DEPLOY_HOST" hostname
+                        echo "Deployment server:"
+                        ssh -i "$SSH_KEY" \
+                            -o StrictHostKeyChecking=no \
+                            "$SSH_USER@$DEPLOY_HOST" hostname
 
-                            echo ""
-                            echo "Image:"
-                            echo "$IMAGE_TAG"
+                        echo ""
+                        echo "Image:"
+                        echo "$IMAGE_TAG"
 
-                            echo ""
-                            echo "======================================"
-                            echo "Preparing Deployment Directory"
-                            echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Preparing Deployment Directory"
+                        echo "======================================"
 
-                            ssh -o StrictHostKeyChecking=no \
-                                "$DEPLOY_USER@$DEPLOY_HOST" \
-                                "mkdir -p /opt/taskapi-kritesh"
+                        ssh -i "$SSH_KEY" \
+                            -o StrictHostKeyChecking=no \
+                            "$SSH_USER@$DEPLOY_HOST" \
+                            "mkdir -p /opt/taskapi-kritesh"
 
-                            echo ""
-                            echo "======================================"
-                            echo "Copying Compose File"
-                            echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Copying Compose File"
+                        echo "======================================"
 
-                            scp -o StrictHostKeyChecking=no \
-                                docker-compose.prod.yml \
-                                "$DEPLOY_USER@$DEPLOY_HOST:/opt/taskapi-kritesh/docker-compose.yml"
+                        scp -i "$SSH_KEY" \
+                            -o StrictHostKeyChecking=no \
+                            docker-compose.prod.yml \
+                            "$SSH_USER@$DEPLOY_HOST:/opt/taskapi-kritesh/docker-compose.yml"
 
-                            echo ""
-                            echo "======================================"
-                            echo "Deploying"
-                            echo "======================================"
+                        echo ""
+                        echo "======================================"
+                        echo "Deploying"
+                        echo "======================================"
 
-                            ssh -o StrictHostKeyChecking=no \
-                                "$DEPLOY_USER@$DEPLOY_HOST" \
-                                "export IMAGE_TAG='$IMAGE_TAG' && \
-                                echo '$DOCKER_PASS' | docker login \
-                                    --username '$DOCKER_USER' \
-                                    --password-stdin && \
-                                cd /opt/taskapi-kritesh && \
-                                docker pull '$IMAGE_TAG' && \
-                                docker compose up -d && \
-                                docker compose ps && \
-                                docker image prune -f && \
-                                docker logout"
+                        ssh -i "$SSH_KEY" \
+                            -o StrictHostKeyChecking=no \
+                            "$SSH_USER@$DEPLOY_HOST" \
+                            "export IMAGE_TAG='$IMAGE_TAG' && \
+                            echo '$DOCKER_PASS' | docker login \
+                                --username '$DOCKER_USER' \
+                                --password-stdin && \
+                            cd /opt/taskapi-kritesh && \
+                            docker pull '$IMAGE_TAG' && \
+                            docker compose up -d && \
+                            docker compose ps && \
+                            docker image prune -f && \
+                            docker logout"
 
-                            echo ""
-                            echo "======================================"
-                            echo "Deployment Successful"
-                            echo "======================================"
-                        '''
-                    }
+                        echo ""
+                        echo "======================================"
+                        echo "Deployment Successful"
+                        echo "======================================"
+                    '''
                 }
             }
         }
