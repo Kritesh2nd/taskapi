@@ -223,114 +223,67 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sh '''
-                        set -e
+                    sshagent(['deployment-ssh']) {
+                        sh '''
+                            set -e
 
-                        echo "======================================"
-                        echo "Deploy"
-                        echo "======================================"
+                            DEPLOY_HOST="10.1.67.189"
+                            DEPLOY_USER="ubuntu"
 
-                        echo "Deployment server:"
-                        hostname
+                            echo "======================================"
+                            echo "Deploy"
+                            echo "======================================"
 
-                        echo ""
-                        echo "Deployment IP:"
-                        hostname -I
+                            echo "Deployment server:"
+                            ssh -o StrictHostKeyChecking=no \
+                                "$DEPLOY_USER@$DEPLOY_HOST" hostname
 
-                        echo ""
-                        echo "Deployment directory:"
-                        echo "$DEPLOY_DIR"
+                            echo ""
+                            echo "Image:"
+                            echo "$IMAGE_TAG"
 
-                        echo ""
-                        echo "Docker image:"
-                        echo "$IMAGE_TAG"
+                            echo ""
+                            echo "======================================"
+                            echo "Preparing Deployment Directory"
+                            echo "======================================"
 
-                        echo ""
-                        echo "======================================"
-                        echo "Preparing Deployment Directory"
-                        echo "======================================"
+                            ssh -o StrictHostKeyChecking=no \
+                                "$DEPLOY_USER@$DEPLOY_HOST" \
+                                "mkdir -p /opt/taskapi-kritesh"
 
-                        mkdir -p "$DEPLOY_DIR"
+                            echo ""
+                            echo "======================================"
+                            echo "Copying Compose File"
+                            echo "======================================"
 
-                        cp docker-compose.prod.yml \
-                            "$DEPLOY_DIR/docker-compose.yml"
+                            scp -o StrictHostKeyChecking=no \
+                                docker-compose.prod.yml \
+                                "$DEPLOY_USER@$DEPLOY_HOST:/opt/taskapi-kritesh/docker-compose.yml"
 
-                        cd "$DEPLOY_DIR"
+                            echo ""
+                            echo "======================================"
+                            echo "Deploying"
+                            echo "======================================"
 
-                        echo ""
-                        echo "Current deployment directory:"
-                        pwd
+                            ssh -o StrictHostKeyChecking=no \
+                                "$DEPLOY_USER@$DEPLOY_HOST" \
+                                "export IMAGE_TAG='$IMAGE_TAG' && \
+                                echo '$DOCKER_PASS' | docker login \
+                                    --username '$DOCKER_USER' \
+                                    --password-stdin && \
+                                cd /opt/taskapi-kritesh && \
+                                docker pull '$IMAGE_TAG' && \
+                                docker compose up -d && \
+                                docker compose ps && \
+                                docker image prune -f && \
+                                docker logout"
 
-                        echo ""
-                        echo "Deployment files:"
-                        ls -la
-
-                        echo ""
-                        echo "======================================"
-                        echo "Docker Login"
-                        echo "======================================"
-
-                        echo "$DOCKER_PASS" | docker login \
-                            --username "$DOCKER_USER" \
-                            --password-stdin
-
-                        echo ""
-                        echo "Docker login successful."
-
-                        echo ""
-                        echo "======================================"
-                        echo "Pulling Docker Image"
-                        echo "======================================"
-
-                        echo "Pulling:"
-                        echo "$IMAGE_TAG"
-
-                        docker pull "$IMAGE_TAG"
-
-                        echo ""
-                        echo "Docker image pulled successfully."
-
-                        echo ""
-                        echo "======================================"
-                        echo "Starting Application"
-                        echo "======================================"
-
-                        docker compose up -d
-
-                        echo ""
-                        echo "======================================"
-                        echo "Container Status"
-                        echo "======================================"
-
-                        docker compose ps
-
-                        echo ""
-                        echo "======================================"
-                        echo "Running Containers"
-                        echo "======================================"
-
-                        docker ps
-
-                        echo ""
-                        echo "======================================"
-                        echo "Cleaning Old Images"
-                        echo "======================================"
-
-                        docker image prune -f
-
-                        docker logout
-
-                        echo ""
-                        echo "======================================"
-                        echo "Deployment Successful"
-                        echo "======================================"
-
-                        echo "Application image:"
-                        echo "$IMAGE_TAG"
-
-                        echo "Deployment directory:"
-                        echo "$DEPLOY_DIR"
-                    '''
+                            echo ""
+                            echo "======================================"
+                            echo "Deployment Successful"
+                            echo "======================================"
+                        '''
+                    }
                 }
             }
         }
