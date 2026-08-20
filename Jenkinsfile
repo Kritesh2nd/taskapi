@@ -223,7 +223,7 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    sshagent(['deployment-ssh']) {
+                    sshagent(['kritesh_ec2_cred']) {
                         sh '''
                             set -e
 
