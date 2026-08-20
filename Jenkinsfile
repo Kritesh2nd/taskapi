@@ -254,7 +254,7 @@ pipeline {
                         ssh -i "$SSH_KEY" \
                             -o StrictHostKeyChecking=no \
                             "$SSH_USER@$DEPLOY_HOST" \
-                            "mkdir -p /opt/taskapi-kritesh"
+                            "sudo mkdir -p /opt/taskapi-kritesh"
 
                         echo ""
                         echo "======================================"
